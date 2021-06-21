@@ -1,0 +1,172 @@
+#library for email
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
+
+#whatsapp library
+import pywhatkit as pwk
+from datetime import datetime
+
+    
+#computer vision library
+import cv2
+import numpy as np
+import os
+import time
+
+#thread library
+import threading
+    
+
+# face detection function
+face_classifier = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
+
+
+#email function
+def email():
+    From = "####"
+    to = "####"
+    
+    data = MIMEMultipart()
+    data['From'] = From
+    data['To'] = to
+    
+    data['Subject'] = "croped image emailed"
+    body = "croped face image is emailed"
+    data.attach(MIMEText(body, 'plain'))
+    
+    filename = "email.jpg"
+    attachment = open("image_path\\filename", "rb")
+    
+    p = MIMEBase('application', 'octet-stream')
+    p.set_payload((attachment).read())
+    
+    encoders.encode_base64(p)
+    p.add_header('Content-Disposition', "attachment; filename= %s" % filename)
+    data.attach(p)
+    
+    s = smtplib.SMTP('smtp.gmail.com', 587)
+    s.starttls()
+    
+    s.login(From, "#######")
+    text = data.as_string()
+    s.sendmail(From, to, text)
+    s.quit()
+    print("Mailed Successfully 👍!!")
+    
+#whatsapp functiom
+def whatsapp():
+    now = datetime.now()
+    hour = int(now.strftime("%H"))
+    minutes =  int(now.strftime("%M")) + 2
+    pwk.sendwhatmsg('+91no.','message from python to whatsapp',hour,minutes)
+    print("Whatsapp messaged sended Successfully👍 !!")
+    
+    
+def aws():
+    os.system("aws ec2 run-instances --image-id ami-0ad704c126371a549  --instance-type t2.micro --count 1 --key-name ansible --block-device-mappings file://ebs.json") 
+    print("Successfully launched and attach 👍 !!")
+    
+
+
+def face_detector(img, size=0.5):
+    
+    # Convert image to grayscale
+    gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+    faces = face_classifier.detectMultiScale(gray, 1.3, 5)
+    if faces is ():
+        return img, []
+    
+    
+    for (x,y,w,h) in faces:
+        cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,255),2)
+        roi = img[y:y+h, x:x+w]
+        roi = cv2.resize(roi, (200, 200))
+    return img, roi
+
+def camtask():
+# Open Webcam
+    cap = cv2.VideoCapture(1)
+    acount = 1
+    count = 1
+    while True:
+
+        ret, frame = cap.read()
+        image, face = face_detector(frame)
+        #image = cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
+    
+        try:
+            face = cv2.cvtColor(face, cv2.COLOR_BGR2GRAY)
+
+            # Pass face to prediction model
+            # "results" comprises of a tuple containing the label and the confidence value
+            results = mahak_model.predict(face) 
+            aresults = Anuj_model.predict(face)
+            
+            if results[0] < aresults[0] :
+                 if  aresults[1] < 500:
+                    confidence = int( 100 * (1 - (aresults[1])/400) )
+                    display_string = str(confidence) + '% Confident it is User'
+       
+            else:
+                 if  results[1] < 500:
+                    confidence = int( 100 * (1 - (results[1])/400) )
+                    display_string = str(confidence) + '% Confident it is User'
+            
+            cv2.putText(image, display_string, (100, 120), cv2.FONT_HERSHEY_COMPLEX, 1, (255,120,150), 2)
+    
+            if confidence > 85:
+                if results[0] < aresults[0]: 
+                    cv2.putText(image, "Hey Anuj", (220, 470), cv2.FONT_HERSHEY_COMPLEX, 1, (0,255,0), 2)
+                    cv2.imshow('Face Recognition', image )
+                    cv2.imwrite("email.jpg" , image)
+                    #key = cv2.waitKey(1) & 0xFF 
+                    #if key == ord('q'):    
+                    if acount == 1:
+                            acount = 0
+                            print("launch ec2 instance ,ebs volume and attaching it ")
+                            x1= threading.Thread(target=aws)
+                            x1.start()
+                    else:
+                        pass
+                    
+            
+                else:
+                    cv2.putText(image, "Hey Mahak", (220, 470), cv2.FONT_HERSHEY_COMPLEX, 1, (0,255,0), 2)
+                    cv2.imshow('Face Recognition', image )
+                    cv2.imwrite("email.jpg" , image)
+                    #key = cv2.waitKey(1) & 0xFF 
+                    #if key == ord('q'):
+                    if count == 1:
+                            count = 0
+                            print("sending mail....")
+                            x4= threading.Thread(target=email)
+                            print("sending whatsapp message....")
+                            x2= threading.Thread(target=whatsapp)
+                            x2.start()
+                            x4.start()
+                            pass
+                            
+                    else:
+                            pass
+           
+            else:
+                cv2.imshow('Face Recognition', image )
+
+        except:
+            cv2.putText(image, "looking for face", (220, 470), cv2.FONT_HERSHEY_COMPLEX, 1, (0,0,255), 2)
+            cv2.imshow('Face Recognition', image )
+            pass
+    
+        if cv2.waitKey(1) == 13: #13 is the Enter Key
+             break
+        
+    cap.release()
+    cv2.destroyAllWindows()  
+
+#camtask()
+x4 = threading.Thread(target=camtask)
+x4.start()
+    
